@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pbl/config/config.dart';
 import 'package:pbl/pages/technician/technician_add.dart';
 import 'package:pbl/pages/technician/technician_detail.dart';
 import 'package:pbl/widgets/popup.dart';
@@ -191,7 +192,7 @@ class _TechnicianPageState extends State<TechnicianPage> {
     try {
       final dio = Dio();
       final res = await dio.post(
-        'http://192.168.6.64:3000/api/add-technician-team',
+        baseUrl + '/api/add-technician-team',
         data: teamData,
       );
 
@@ -223,7 +224,7 @@ class _TechnicianPageState extends State<TechnicianPage> {
     try {
       final dio = Dio();
       final res = await dio.post(
-        'http://192.168.6.64:3000/api/update-technician-team',
+        baseUrl + '/api/update-technician-team',
         data: teamData,
       );
 
@@ -246,7 +247,7 @@ class _TechnicianPageState extends State<TechnicianPage> {
   deleteUser(int user_id) async{
     try {
       final dio = Dio();
-      var url = "http://192.168.6.64:3000/api/delete-user";
+      var url = baseUrl + "/api/delete-user";
       final res = await dio.post(url, data: {'id' : user_id});
 
       if (res.statusCode == 200) {
@@ -264,7 +265,7 @@ class _TechnicianPageState extends State<TechnicianPage> {
   Future<void> deleteTeam(int team_id) async {
     try {
       final dio = Dio();
-      var url = "http://192.168.6.64:3000/api/delete-technician-team";
+      var url = baseUrl + "/api/delete-technician-team";
       final res = await dio.post(url, data: {'id' : team_id});
 
       if (res.statusCode == 200) {
@@ -305,7 +306,7 @@ class _TechnicianPageState extends State<TechnicianPage> {
   getUser(int limit, int offset, String search) async {
     try {
       final dio = Dio();
-      var url = "http://192.168.6.64:3000/api/get-technician?limit=" + limit.toString() +  "&offset=" + offset.toString() + "&search=" + search;
+      var url = baseUrl + "/api/get-technician?limit=" + limit.toString() +  "&offset=" + offset.toString() + "&search=" + search;
       final res = await dio.get(url);
 
       if (res.statusCode == 200) {
@@ -344,7 +345,7 @@ class _TechnicianPageState extends State<TechnicianPage> {
   getTeam(int limit, int offset, String search) async {
     try {
       final dio = Dio();
-      var url = "http://192.168.6.64:3000/api/get-technician-team?limit=" + limit.toString() +  "&offset=" + offset.toString() + "&search=" + search;
+      var url = baseUrl + "/api/get-technician-team?limit=" + limit.toString() +  "&offset=" + offset.toString() + "&search=" + search;
       final res = await dio.get(url);
 
       if (res.statusCode == 200) {
@@ -639,7 +640,7 @@ class _TechnicianPageState extends State<TechnicianPage> {
                 ),
                 child: CircleAvatar(
                   radius: 30,
-                  backgroundImage: user['image'] != null ? NetworkImage('http://192.168.6.64:3000' + user['image']): NetworkImage('https://photosking.net/wp-content/uploads/2024/05/no-dp_16.webp'),
+                  backgroundImage: user['image'] != null ? NetworkImage(baseUrl + user['image']): NetworkImage('https://photosking.net/wp-content/uploads/2024/05/no-dp_16.webp'),
                 ),
               ),
               Column(
@@ -983,7 +984,7 @@ class _TechnicianPageState extends State<TechnicianPage> {
                 ),
                 child: CircleAvatar(
                   radius: 26,
-                  backgroundImage: technicianTeam['image'] != null ? NetworkImage('http://192.168.6.64:3000' + technicianTeam['image']) : NetworkImage('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSpuLk0N3iXJhRLJpJ9vyDe4RwNjgpvPYB3Ww&s'),
+                  backgroundImage: technicianTeam['image'] != null ? NetworkImage(baseUrl + technicianTeam['image']) : NetworkImage('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSpuLk0N3iXJhRLJpJ9vyDe4RwNjgpvPYB3Ww&s'),
                 ),
               ),
               Column(
@@ -1408,7 +1409,7 @@ class _TechnicianPageState extends State<TechnicianPage> {
                                 radius: 45,
                                 backgroundColor: Colors.black26,
                                 backgroundImage: _imageTeamUpdate == null ? team['image'] != null ?
-                                  NetworkImage('http://192.168.6.64:3000' + team['image']) : 
+                                  NetworkImage(baseUrl + team['image']) : 
                                   NetworkImage('https://photosking.net/wp-content/uploads/2024/05/no-dp_16.webp') : 
                                   FileImage(_imageTeamUpdate!),
                               ),

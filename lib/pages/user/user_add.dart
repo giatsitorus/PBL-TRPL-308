@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lottie/lottie.dart';
+import 'package:pbl/config/config.dart';
 import 'package:pbl/widgets/custom_text_field.dart';
 import 'package:dio/dio.dart';
 import 'dart:io';
@@ -191,7 +192,7 @@ class _UserAddPageState extends State<UserAddPage> {
     try {
       final dio = Dio();
       final res = await dio.post(
-        'http://192.168.6.64:3000/api/add-user',
+        baseUrl + '/api/add-user',
         data: userData,
       );
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lottie/lottie.dart';
+import 'package:pbl/config/config.dart';
 import 'package:pbl/widgets/custom_text_field.dart';
 import 'package:dio/dio.dart';
 import 'dart:io';
@@ -176,7 +177,7 @@ class _UserEditPageState extends State<UserEditPage> {
     try {
       final dio = Dio();
       final res = await dio.post(
-        'http://192.168.6.64:3000/api/update-user',
+        baseUrl + '/update-user',
         data: userData,
       );
 
@@ -231,7 +232,7 @@ class _UserEditPageState extends State<UserEditPage> {
                           radius: 55,
                           backgroundColor: Colors.black26,
                           backgroundImage: _image == null ? widget.user['image'] != null ?
-                            NetworkImage('http://192.168.6.64:3000' + widget.user['image']) : 
+                            NetworkImage(baseUrl + widget.user['image']) : 
                             NetworkImage('https://photosking.net/wp-content/uploads/2024/05/no-dp_16.webp') : 
                             FileImage(_image!),
                         ),

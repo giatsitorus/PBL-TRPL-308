@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lottie/lottie.dart';
+import 'package:pbl/config/config.dart';
 import 'package:pbl/widgets/custom_text_field.dart';
 import 'package:dio/dio.dart';
 import 'dart:io';
@@ -117,14 +118,12 @@ class _TechnicianAddPageState extends State<TechnicianAddPage> {
   Future fetchDataTeam() async {
     try {
       final dio = Dio();
-      var url = "http://192.168.6.64:3000/api/get-technician-team";
+      var url = baseUrl + "/api/get-technician-team";
       final res = await dio.get(url);
 
       if (res.statusCode == 200) {
         setState(() {
           _technicianTeams = List<Map<String, dynamic>>.from(res.data['data']);
-          print("selected team ==================");
-          print(_technicianTeams);
           if (_technicianTeams.isNotEmpty) {
             _selectedTeam = _technicianTeams[0]['id'].toString();
           }
@@ -223,7 +222,7 @@ class _TechnicianAddPageState extends State<TechnicianAddPage> {
     try {
       final dio = Dio();
       final res = await dio.post(
-        'http://192.168.6.64:3000/api/add-user',
+        baseUrl + '/api/add-user',
         data: userData,
       );
 

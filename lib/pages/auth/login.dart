@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:pbl/config/config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
@@ -35,7 +36,7 @@ class _LoginPageState extends State<LoginPage> {
     Navigator.pushReplacementNamed(context, '/adminhome'); // Halaman admin
 
     try {
-      final response = await Dio().post('http://192.168.6.64:3000/api/login', data: {
+      final response = await Dio().post(baseUrl + '/api/login', data: {
         'email': email,
         'password': password,
       });

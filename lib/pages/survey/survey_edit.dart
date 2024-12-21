@@ -11,15 +11,18 @@ import 'dart:io';
 final dio = Dio();
 final _formKey = GlobalKey<FormState>();
 
-class SurveyAddPage extends StatefulWidget {
-  const SurveyAddPage({super.key});
+class SurveyEditPage extends StatefulWidget {
+  final Map survey;
+
+  const SurveyEditPage({super.key, required this.survey});
 
   @override
-  State<SurveyAddPage> createState() => _SurveyAddPageState();
+  State<SurveyEditPage> createState() => _SurveyEditPageState();
 }
 
-class _SurveyAddPageState extends State<SurveyAddPage> {
+class _SurveyEditPageState extends State<SurveyEditPage> {
   List<File> _imageFiles = [];
+  List<Map<dynamic, dynamic>> _SurveyImages = [];
   final _titleController = TextEditingController();
   final _dateController = TextEditingController();
   final _projectController = TextEditingController();
@@ -43,6 +46,33 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
 
       });
     }
+  }
+
+  getSurveyImages(int survey_id) async {
+    try {
+      final dio = Dio();
+      var url = baseUrl + "/api/get-survey-images?survey_id=" + survey_id.toString();
+      final res = await dio.get(url);
+
+      if (res.statusCode == 200) {
+        setState(() {
+          _SurveyImages = List<Map<String, dynamic>>.from(res.data['data']);
+        });
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+    return {'data':[]};
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController.text = widget.survey['title'];
+    _dateController.text = widget.survey['survey_date'];
+    _projectController.text = widget.survey['project'];
+    _descriptionController.text = widget.survey['description'];
+    getSurveyImages(widget.survey['id']);
   }
 
   String? titleValidator(String? value) {
@@ -73,7 +103,7 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
     return null;
   }
 
-  Future<void> addSurvey() async {
+  Future<void> updateSurvey() async {
     List<MultipartFile> files = [];
     if (_imageFiles.isNotEmpty) {
       for (var image in _imageFiles) {
@@ -84,16 +114,18 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
       }
     }
     var surveyData = FormData.fromMap({
+      "survey_id": widget.survey['id'],
       "title": _titleController.text,
       "project": _projectController.text,
       "survey_date": selectedDate,
       "description": _descriptionController.text,
-      if (files.isNotEmpty) "surveyImages": files,
+      "existed_images": _SurveyImages, 
+      if (files.isNotEmpty) "surveyUpdateImages": files,
     });
     try {
       final dio = Dio();
       final res = await dio.post(
-        baseUrl + '/api/add-survey',
+        baseUrl + '/api/update-survey',
         data: surveyData,
       );
 
@@ -217,6 +249,11 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
       _imageFiles.removeAt(index);
     });
   }
+  void _removeImageOriginal(int index) {
+    setState(() {
+      _SurveyImages.removeAt(index);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +262,7 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Color(0xFF4C53A5),
-        title: const Text('Survei Baru',
+        title: const Text('Ubah Survei',
           style: TextStyle(fontSize: 17, color: Colors.white),),
         centerTitle: true,
         leading: IconButton(
@@ -395,42 +432,79 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
                                 child: SingleChildScrollView(
                                   scrollDirection: Axis.horizontal, 
                                   child: Row(
-                                    children: List.generate(_imageFiles.length, (index) {
-                                      final imagePath = _imageFiles[index]?.path;
-                                      return Container(
-                                        width: 82,
-                                        height: 82,
-                                        margin: EdgeInsets.symmetric(horizontal: 2),
-                                        child: Stack(
-                                          children: [
-                                            imagePath != null
-                                            ? Image.file(
-                                                File(imagePath),
-                                                height: 82,
-                                                width: 82,
-                                                fit: BoxFit.cover,
-                                              )
-                                            : Container(),
-                                            Positioned(
-                                              top: 0,
-                                              right: 0,
-                                              child: InkWell(
-                                                onTap: (){
-                                                  _removeImage(index);
-                                                },
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.red.withOpacity(0.8),
-                                                    borderRadius: BorderRadius.circular(50)
+                                    children: [
+                                      ...List.generate(_imageFiles.length, (index) {
+                                        final imagePath = _imageFiles[index]?.path;
+                                        return Container(
+                                          width: 82,
+                                          height: 82,
+                                          margin: EdgeInsets.symmetric(horizontal: 2),
+                                          child: Stack(
+                                            children: [
+                                              imagePath != null
+                                              ? Image.file(
+                                                  File(imagePath),
+                                                  height: 82,
+                                                  width: 82,
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : Container(),
+                                              Positioned(
+                                                top: 0,
+                                                right: 0,
+                                                child: InkWell(
+                                                  onTap: (){
+                                                    _removeImage(index);
+                                                  },
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.red.withOpacity(0.8),
+                                                      borderRadius: BorderRadius.circular(50)
+                                                    ),
+                                                    child: Icon(Icons.remove, color: Colors.white, size: 15,)
                                                   ),
-                                                  child: Icon(Icons.remove, color: Colors.white, size: 15,)
                                                 ),
-                                              ),
-                                            )
-                                          ]
-                                        ),
-                                      );
-                                    }),
+                                              )
+                                            ]
+                                          ),
+                                        );
+                                      }),
+                                      ...List.generate(_SurveyImages.length, (index) {
+                                        final imagePath = _SurveyImages[index]['image']; 
+                                        return Container(
+                                          width: 82,
+                                          height: 82,
+                                          margin: EdgeInsets.symmetric(horizontal: 2),
+                                          child: Stack(
+                                            children: [imagePath != null
+                                                ? Image.network(
+                                                  baseUrl + imagePath,
+                                                  height: 82,
+                                                  width: 82,
+                                                  fit: BoxFit.cover,
+                                                )
+                                                : Container(),
+                                                Positioned(
+                                                top: 0,
+                                                right: 0,
+                                                child: InkWell(
+                                                  onTap: (){
+                                                    _removeImageOriginal(index);
+                                                  },
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.red.withOpacity(0.8),
+                                                      borderRadius: BorderRadius.circular(50)
+                                                    ),
+                                                    child: Icon(Icons.remove, color: Colors.white, size: 15,)
+                                                  ),
+                                                ),
+                                              )
+                                            ]
+                                          )
+                                        );
+                                      }),
+                                    ]
                                   )
                                 ),
                               )
@@ -516,7 +590,7 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Tambah Survei', style: TextStyle(color: Colors.white, fontSize: 14))
+                      Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontSize: 14))
                     ],
                   ),
                 ),
@@ -529,8 +603,8 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
     );
   }
 
-  void popUpMessage(bool is_success){
-    showDialog(
+  void popUpMessage(bool is_success) async {
+    await showDialog(
       context: context, 
       builder: (BuildContext context){
         return Dialog(
@@ -540,7 +614,7 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
               vertical: 8,
               horizontal: 32
             ),
-            height: 260,
+            height: 240,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(6)
@@ -556,7 +630,7 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
                 ),
                 Container(
                   margin: EdgeInsets.symmetric(vertical: 10),
-                  child:Text('Berhasil menambahkan data survei baru!', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),),
+                  child:Text('Berhasil mengubah data survei!', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -644,6 +718,10 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
         );
       }
     );
+
+    if(is_success){
+      Navigator.pop(context, true);
+    }
   }
 
   void popUpConfirmation(){
@@ -741,7 +819,7 @@ class _SurveyAddPageState extends State<SurveyAddPage> {
                       ),
                       onPressed: (){
                         Navigator.of(context).pop();
-                        addSurvey();
+                        updateSurvey();
                       },
                       child: Text('Konfirmasi', style: TextStyle(fontSize: 12),),
                     )

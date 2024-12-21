@@ -7,6 +7,8 @@ import 'package:pbl/widgets/popup.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
+import 'package:pbl/config/config.dart';
 
 final dio = Dio();
 
@@ -24,10 +26,23 @@ class _SurveyPageState extends State<SurveyPage> {
   String _querySearch = '';
   bool _isLoading = false;
   bool hasMore = true;
+  bool isApplyFilter = false;
   int _limit = 10; 
   int _offset = 0;
 
   final controller = ScrollController();
+  DateTime selectedDateEnd = DateTime.now();
+  DateTime selectedDateStart = DateTime.now();
+  final _dateEndController = TextEditingController();
+  final _dateStartController = TextEditingController();
+
+  String? _selectedStatus = 'all';
+  final Map<String, String> _statusMap = {
+    'All': 'all',
+    'Open': 'draft',
+    'Done': 'completed',
+  };
+
 
   @override
   void initState(){
@@ -43,8 +58,44 @@ class _SurveyPageState extends State<SurveyPage> {
     });
   }
 
+  Future<void> _selectDateEnd(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDateEnd,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+
+    // Jika user memilih tanggal
+    if (picked != null && picked != selectedDateEnd) {
+      setState(() {
+        selectedDateEnd = picked;
+        _dateEndController.text = DateFormat('d MMM yyyy').format(selectedDateEnd);
+
+      });
+    }
+  }
+
+  Future<void> _selectDateStart(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDateStart,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+
+    // Jika user memilih tanggal
+    if (picked != null && picked != selectedDateStart) {
+      setState(() {
+        selectedDateStart = picked;
+        _dateStartController.text = DateFormat('d MMM yyyy').format(selectedDateStart);
+
+      });
+    }
+  }
+
   Future fetchData() async {
-    var res = await getSurvey(_limit, _offset, _querySearch);
+    var res = await getSurvey(_limit, _offset, _querySearch, selectedDateStart, selectedDateEnd, _selectedStatus);
     setState(() {
       _offset += 10;
       _Surveys.addAll(List<Map<String, dynamic>>.from(res['data']));
@@ -56,7 +107,7 @@ class _SurveyPageState extends State<SurveyPage> {
       _isLoading = true;
       _offset = 0;
     });
-    var res = await getSurvey(_limit, _offset, _querySearch);
+    var res = await getSurvey(_limit, _offset, _querySearch, selectedDateStart, selectedDateEnd, _selectedStatus);
     setState(() {
       _offset = 10;
       _isLoading = false;
@@ -67,10 +118,12 @@ class _SurveyPageState extends State<SurveyPage> {
     });
   }
 
-  getSurvey(int limit, int offset, String search) async {
+  getSurvey(int limit, int offset, String search, DateTime startDate, DateTime endDate, String? status) async {
+    var start = DateFormat('yyyy-MM-dd HH:mm:ss').format(startDate);
+    var end = DateFormat('yyyy-MM-dd HH:mm:ss').format(endDate);
     try {
       final dio = Dio();
-      var url = "http://192.168.6.64:3000/api/get-survey?limit=" + limit.toString() +  "&offset=" + offset.toString() + "&search=" + search;
+      var url = baseUrl + "/api/get-survey?limit=" + limit.toString() +  "&offset=" + offset.toString() + "&search=" + search + "&state=" + status.toString() + "&startDate=" + start + "&endDate=" + end + "&applyFilter=" + isApplyFilter.toString();
       final res = await dio.get(url);
 
       if (res.statusCode == 200) {
@@ -85,7 +138,7 @@ class _SurveyPageState extends State<SurveyPage> {
   deleteSurvey(int survey_id) async{
     try {
       final dio = Dio();
-      var url = "http://192.168.6.64:3000/api/delete-survey";
+      var url = baseUrl + "/api/delete-survey";
       final res = await dio.post(url, data: {'id' : survey_id});
 
       if (res.statusCode == 200) {
@@ -132,10 +185,7 @@ class _SurveyPageState extends State<SurveyPage> {
         actions: [
           IconButton(
             onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => const PopUpFilter(),
-              );
+              popUpFilter();
             },
             icon: Icon(Icons.filter_list_alt, size: 18, color: Colors.white),
           ),
@@ -564,8 +614,9 @@ class _SurveyPageState extends State<SurveyPage> {
                 ),
                 SizedBox(height: 45), 
                 InkWell(
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => SurveyDetailPage(survey: survey)));
+                  onTap: () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (context) => SurveyDetailPage(survey: survey)));
+                    getInitialSurvey();
                   },
                   child: Container(
                     height: 28,
@@ -790,186 +841,260 @@ class _SurveyPageState extends State<SurveyPage> {
       }
     );
   }
-}
 
+  void popUpFilter(){
+    showDialog(
+      context: context, 
+      builder: (BuildContext context){
+        return Dialog(
+          child: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setStateDialog) {
+              return Container(
+                  padding: EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 32
+                  ),
+                  height: 300,
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6)
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Tanggal Mulai', style: TextStyle(fontSize: 12, color: Colors.black54),),
+                      SizedBox(height: 6,),
+                      Container(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 0),
+                          child: SizedBox(
+                            height: 35,
+                            child: InkWell(
+                              onTap: (){
+                                _selectDateStart(context);
+                              },
+                              child: TextFormField(
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black
+                                ),
+                                keyboardType: TextInputType.text,
+                                enabled: false,
+                                controller: _dateStartController,
+                                decoration: InputDecoration(
+                                  prefixIcon: Icon(Icons.date_range, size: 20, color: Colors.black,),
+                                  fillColor: Color(0xFF4C53A5),
+                                  hintStyle: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500
+                                  ),
+                                  hintText: 'Pilih tanggal',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6.0),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF4C53A5),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6.0),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF4C53A5),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  disabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6.0),
+                                    borderSide: const BorderSide(
+                                      color: Colors.black54,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6.0),
+                                    borderSide: const BorderSide(
+                                      color: Colors.red,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.all(8.0),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 10,),
+                      Text('Tanggal Berakhir', style: TextStyle(fontSize: 12, color: Colors.black54),),
+                      SizedBox(height: 6,),
+                      Container(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 0),
+                          child: SizedBox(
+                            height: 35,
+                            child: InkWell(
+                              onTap: (){
+                                _selectDateEnd(context);
+                              },
+                              child: TextFormField(
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black
+                                ),
+                                keyboardType: TextInputType.text,
+                                enabled: false,
+                                controller: _dateEndController,
+                                decoration: InputDecoration(
+                                  prefixIcon: Icon(Icons.date_range, size: 20, color: Colors.black,),
+                                  fillColor: Color(0xFF4C53A5),
+                                  hintStyle: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500
+                                  ),
+                                  hintText: 'Pilih tanggal',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6.0),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF4C53A5),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6.0),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF4C53A5),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  disabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6.0),
+                                    borderSide: const BorderSide(
+                                      color: Colors.black54,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6.0),
+                                    borderSide: const BorderSide(
+                                      color: Colors.red,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.all(8.0),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 10,),
+                      Text('Status', style: TextStyle(fontSize: 12, color: Colors.black54),),
+                      SizedBox(height: 6,),
+                      Container(
+                        width: MediaQuery.of(context).size.width, 
+                        height: 35,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6.0),
+                          border: Border.all(
+                            color: Color(0xFF4C53A5),
+                            width: 1.0, 
+                          ),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 10.0),
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: _selectedStatus,
+                          style: TextStyle(
+                            color: Colors.grey.shade500,  
+                            fontSize: 12, 
+                          ),
+                          onChanged: (String? newValue) {
+                              setStateDialog(() {
+                                _selectedStatus = newValue;
+                              });
+                            },
+                          underline: SizedBox(),
+                          items: _statusMap.values.map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(_statusMap.keys.firstWhere((k) => _statusMap[k] == value)),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      SizedBox(height: 20,),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF4C53A5),
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 0,
+                                    horizontal: 15
+                                ),
+                                foregroundColor: Colors.white,
+                                side: BorderSide(
+                                  color: Color(0xFF4C53A5),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12), // Set the border radius here
+                                ),
+                              ),
+                              onPressed: (){
+                                setState(() {
+                                  isApplyFilter = false;
+                                  _dateEndController.clear();
+                                  _dateStartController.clear();
+                                  _selectedStatus = 'all';
+                                });
+                                getInitialSurvey();
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Reset', style: TextStyle(fontSize: 12),),
+                            ),
+                          ),
+                          SizedBox(width: 8,),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF388E3C),
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 0,
+                                    horizontal: 20
+                                ),
+                                foregroundColor: Colors.white,
+                                side: BorderSide(
+                                  color: Color(0xFF388E3C),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12), // Set the border radius here
+                                ),
+                              ),
+                              onPressed: (){
+                                setState(() {
+                                  isApplyFilter = true;
+                                });
+                                getInitialSurvey();
+                                Navigator.of(context).pop();
 
-
-class PopUpFilter extends StatelessWidget {
-  const PopUpFilter({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        padding: EdgeInsets.symmetric(
-            vertical: 8,
-            horizontal: 32
-        ),
-        height: 300,
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(6)
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Tanggal Mulai', style: TextStyle(fontSize: 12, color: Colors.black54),),
-            SizedBox(height: 6,),
-            Container(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 0),
-                child: SizedBox(
-                  height: 35,
-                  child: TextFormField(
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black
-                    ),
-                    decoration: InputDecoration(
-                      fillColor: Color(0xFF4C53A5),
-                      hintStyle: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500
-                      ),
-                      hintText: 'Pilih Tanggal',
-                      prefixIcon: Icon(Icons.date_range, size: 18,),
-                      // suffixIcon: suffixIcon,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6.0),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF4C53A5),
-                          width: 1.0,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6.0),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF4C53A5),
-                          width: 1.0,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.only(top: 8.0),
-                    ),
+                              },
+                              child: Text('Konfirmasi', style: TextStyle(fontSize: 12),),
+                            ),
+                          ),
+                        ],
+                      )
+                    ],
                   ),
-                ),
-              ),
-            ),
-            SizedBox(height: 10,),
-            Text('Tanggal Berakhir', style: TextStyle(fontSize: 12, color: Colors.black54),),
-            SizedBox(height: 6,),
-            Container(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 0),
-                child: SizedBox(
-                  height: 35,
-                  child: TextFormField(
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black
-                    ),
-                    decoration: InputDecoration(
-                      fillColor: Color(0xFF4C53A5),
-                      hintStyle: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500
-                      ),
-                      hintText: 'Pilih Tanggal',
-                      prefixIcon: Icon(Icons.date_range, size: 18,),
-                      // suffixIcon: suffixIcon,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6.0),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF4C53A5),
-                          width: 1.0,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6.0),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF4C53A5),
-                          width: 1.0,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.only(top: 8.0),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 10,),
-            Text('Status', style: TextStyle(fontSize: 12, color: Colors.black54),),
-            SizedBox(height: 6,),
-            Container(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 0),
-                child: SizedBox(
-                  height: 35,
-                  child: TextFormField(
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black
-                    ),
-                    decoration: InputDecoration(
-                      fillColor: Color(0xFF4C53A5),
-                      hintStyle: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500
-                      ),
-                      hintText: 'Pilih Status',
-                      prefixIcon: Icon(Icons.stacked_bar_chart, size: 18,),
-                      suffixIcon: Icon(Icons.arrow_drop_down, size: 18,),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6.0),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF4C53A5),
-                          width: 1.0,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6.0),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF4C53A5),
-                          width: 1.0,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.only(top: 8.0),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 20,),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF388E3C),
-                      padding: EdgeInsets.symmetric(
-                          vertical: 0,
-                          horizontal: 20
-                      ),
-                      foregroundColor: Colors.white,
-                      side: BorderSide(
-                        color: Color(0xFF388E3C),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12), // Set the border radius here
-                      ),
-                    ),
-                    onPressed: (){
-                      Navigator.of(context).pop();
-                    },
-                    child: Text('Konfirmasi', style: TextStyle(fontSize: 12),),
-                  ),
-                ),
-              ],
-            )
-          ],
-        ),
-      ),
+                );
+            }
+          )
+        );
+      }
     );
+    
   }
 }

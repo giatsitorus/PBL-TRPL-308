@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:pbl/config/config.dart';
 import 'package:pbl/models/user.dart';
 import 'package:pbl/pages/user/user_add.dart';
 import 'package:pbl/pages/user/user_detail.dart';
@@ -75,7 +76,7 @@ class _UserPageState extends State<UserPage> {
   getUser(int limit, int offset, String search) async {
     try {
       final dio = Dio();
-      var url = "http://192.168.6.64:3000/api/get-user?limit=" + limit.toString() +  "&offset=" + offset.toString() + "&search=" + search;
+      var url = baseUrl + "/api/get-user?limit=" + limit.toString() +  "&offset=" + offset.toString() + "&search=" + search;
       final res = await dio.get(url);
 
       if (res.statusCode == 200) {
@@ -90,7 +91,7 @@ class _UserPageState extends State<UserPage> {
   deleteUser(int user_id) async{
     try {
       final dio = Dio();
-      var url = "http://192.168.6.64:3000/api/delete-user";
+      var url = baseUrl + "/api/delete-user";
       final res = await dio.post(url, data: {'id' : user_id});
 
       if (res.statusCode == 200) {
@@ -325,7 +326,7 @@ class _UserPageState extends State<UserPage> {
                 ),
                 child: CircleAvatar(
                   radius: 30,
-                  backgroundImage: user['image'] != null ? NetworkImage('http://192.168.6.64:3000' + user['image']): NetworkImage('https://photosking.net/wp-content/uploads/2024/05/no-dp_16.webp'),
+                  backgroundImage: user['image'] != null ? NetworkImage(baseUrl + user['image']): NetworkImage('https://photosking.net/wp-content/uploads/2024/05/no-dp_16.webp'),
                 ),
               ),
               Column(

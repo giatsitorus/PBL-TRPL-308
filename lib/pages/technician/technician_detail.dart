@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:pbl/config/config.dart';
 import 'package:pbl/models/user.dart';
 import 'package:lottie/lottie.dart';
 import 'package:pbl/pages/user/user_edit.dart';
@@ -32,7 +35,7 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
   Future<void> getDetailUser() async {
   try {
     final dio = Dio();
-    var url = "http://192.168.6.64:3000/api/get-user?user_id=" + widget.user['id'].toString();
+    var url = baseUrl + "/api/get-user?user_id=" + widget.user['id'].toString();
     final res = await dio.get(url);
 
     if (res.statusCode == 200 && res.data['data'] != null) {
@@ -75,7 +78,7 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
     try {
       final dio = Dio();
       final res = await dio.post(
-        'http://192.168.6.64:3000/api/change-password',
+        baseUrl + '/api/change-password',
         data: userData,
       );
       if (res.statusCode == 200) {
@@ -96,7 +99,7 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
   deleteUser(int user_id) async{
     try {
       final dio = Dio();
-      var url = "http://192.168.6.64:3000/api/delete-user";
+      var url = baseUrl + "/api/delete-user";
       final res = await dio.post(url, data: {'id' : user_id});
 
       if (res.statusCode == 200) {
@@ -146,7 +149,7 @@ class _TechnicianDetailPageState extends State<TechnicianDetailPage> {
                   CircleAvatar(
                     radius: 60,
                     backgroundImage: _user['image'] != null
-                        ? NetworkImage('http://192.168.6.64:3000' + _user['image'])
+                        ? NetworkImage(baseUrl + _user['image'])
                         : NetworkImage('https://photosking.net/wp-content/uploads/2024/05/no-dp_16.webp'),
                   )
                 ],

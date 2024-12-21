@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:pbl/config/config.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -27,7 +28,7 @@ class _RegisterPageState extends State<RegisterPage> {
       }
 
       try {
-        final response = await Dio().post('http://192.168.6.64:3000/api/register', data: {
+        final response = await Dio().post(baseUrl + '/api/register', data: {
           'name': name,
           'email': email,
           'password': password,
